@@ -2,8 +2,8 @@
 > 在Sublime里开发cocos2dx-js的插件.
 
 ## 下载
-[github](https://github.com/FloydaGitHub/CocosJsDev)  
-[coding](https://coding.net/u/Floyda/p/CocosJsDev/git)  
+> [github](https://github.com/FloydaGitHub/CocosJsDev)  
+> [coding](https://coding.net/u/Floyda/p/CocosJsDev/git)  
 
 + git clone
 克隆到Sublime的Packages目录下
