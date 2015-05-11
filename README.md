@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #CocosJsDev
 > 在Sublime里开发cocos2dx-js的插件.
 
@@ -20,3 +21,7 @@
 + 新建工程
 + 自动补全
 + 函数跳转
+=======
+# CocosJsDev
+sublime的cocos2dx-js插件
+>>>>>>> 3e02aa5e3490c71b39e097e7515b0185ad7ae9d4
