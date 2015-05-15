@@ -1,13 +1,20 @@
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# 
 # Author: Floyda
-# Date: 2015-5-11
 
 import sublime
 import sublime_plugin
 import os
 import sys
+import webbrowser
+import threading
+from threading import Thread
+try:
+	from http.server import BaseHTTPRequestHandler, HTTPServer
+except ImportError:
+	import BaseHTTPServer
+	from SimpleHTTPServer import SimpleHTTPRequestHandler
 
 
 MAC_CHECK_FILES   = ['.bash_profile', '.bash_login', '.profile']
@@ -82,38 +89,82 @@ def get_workdir(file_name):
 	if src_dir < 0 : return None
 	return path[:src_dir]
 
-def check_file(file_name):
-	if get_workdir(file_name) is None:
-		return False
-	return True
-
-def run_local_server(file_name):
-	COCOS_CONSOLE_ROOT = _find_environment_variable("COCOS_CONSOLE_ROOT")
-	if COCOS_CONSOLE_ROOT == None:
-		sublime.message_dialog("Install Cocos2d-js by %COCOS_JS_ROOT%/setup.py")
-		return
-
-	WORKDIR = get_workdir(file_name)
-	if WORKDIR == None: return
-
-	def _Mac():
-		os.system("ps x| grep cocos2d-js | xargs kill -9")
-		os.system("%s/cocos run -s %s -p web --port 8000" % (COCOS_CONSOLE_ROOT, WORKDIR))
-		os.system('open "http://127.0.0.1:8000"')
-
-	if _isWindows(): 
-		sublime.set_timeout_async(lambda:os.system("%s & cd %s & cocos run -p web & pause" % (WORKDIR[:2], WORKDIR)), 0)
-	if _is_mac(): 
-		sublime.set_timeout_async(_Mac, 0)
-	if _isLinux():
-		pass
-
 
 
 class CocosjsLocalServerCommand(sublime_plugin.WindowCommand):
+	def __init__(self, window):
+		super(CocosjsLocalServerCommand, self).__init__(window)
+		self.cur_server_port = None
+		self.cur_workdir = None
+		self._host = '127.0.0.1'
+		self._port = 8000
+		self._port_max_add = 2000
+		self.cocos_console_root = _find_environment_variable("COCOS_CONSOLE_ROOT")
+		# sublime.set_timeout_async(lambda:os.system('ps x|grep cocos2d-js|xargs kill -9'), 0)
+		# os.system('ps x|grep cocos2d-js|xargs kill -9')
+
+	def get_free_port(self):
+		HandlerClass = BaseHTTPRequestHandler
+		ServerClass  = HTTPServer
+		Protocol     = "HTTP/1.0"
+		HandlerClass.protocol_version = Protocol
+
+		host = self._host
+		port = self._port
+		port_max_add = self._port_max_add
+		delta = 0
+
+		while (delta <= port_max_add):
+		    port += 1
+		    delta += 1
+		    server_address = (host, port)
+		    try:
+		        httpd = ServerClass(server_address, HandlerClass)
+		    except Exception as e:
+		        httpd = None
+
+		    if httpd is not None:
+		        break
+
+		if httpd is None:
+			sublime.message_dialog("Start server failed.")
+			return None
+
+		return port
+
+	def run_web(self, workdir):
+		self.cur_workdir = workdir
+		self.cur_server_port = self.get_free_port()
+
+		if _isWindows(): 
+			sublime.set_timeout_async(lambda:os.system("%s & cd %s & cocos run -p web & pause" % (workdir[:2], workdir)), 0)
+		if _is_mac(): 
+			# os.system('ps x|grep cocos2d-js|xargs kill -9')
+			sublime.status_message('Cocos2d-js Local Server is Starting . . .')
+			sublime.set_timeout_async(lambda:os.system("%s/cocos run -s %s -p web --port %s" % (self.cocos_console_root, workdir, self.cur_server_port)), 0)
+		if _isLinux():
+			pass
+
+	def run_webbrowser(self, workdir):
+		if self.cur_workdir != workdir:
+			self.run_web(workdir)
+			return
+
+		port = self.cur_server_port
+		url = 'http://%s:%s' % (self._host, port)
+		webbrowser.open_new(url)
+		sublime.status_message('open webbrowser : %s' % url)
+
 	def run(self):
-		print("run_command: cocosjs_local_server")
-		run_local_server(self.window.active_view().file_name())
+		if self.cocos_console_root == None:
+			sublime.message_dialog("Install Cocos2d-js by %COCOS_JS_ROOT%/setup.py")
+			return
+
+		workdir = get_workdir(self.window.active_view().file_name())
+		if workdir == None: return
+
+		self.run_webbrowser(workdir)
+
 
 	def is_enabled(self):
 		return True
@@ -121,3 +172,7 @@ class CocosjsLocalServerCommand(sublime_plugin.WindowCommand):
 	def is_visible(self):
 		return self.is_enabled()
 
+
+
+
+		
